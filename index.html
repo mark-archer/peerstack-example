@@ -107,7 +107,6 @@
       connectionStatus('initializing...');
       const me = peerstack.user.hydrateMe(userId(), secretKey());
       const db = await peerstack.db.getIndexedDB()
-      let user = await db.get(me.id);
       peerstack.connections.eventHandlers.onDeviceDiscovered = deviceId => remoteDeviceIds.push(deviceId);
       peerstack.connections.eventHandlers.onDeviceConnected = connection => {
         peerstack.remoteCalls.syncDBs(connection);
@@ -171,6 +170,7 @@
       filesAdded
     }
     ko.applyBindings(vm);
+    window.vm = vm;
   </script>
 
 
