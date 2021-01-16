@@ -153,9 +153,9 @@
       fileInput.value = "";
     }
 
-    const fileProgress = ko.observable(0);
-    fileProgress.subscribe(() => console.log(`file transfer: ${Math.round(fileProgress() * 100)}%`))
     async function requestFile(fileId) {
+      const fileProgress = ko.observable(0);
+      fileProgress.subscribe(() => console.log(`file transfer: ${Math.round(fileProgress() * 100)}%`))
       const file = await peerstack.remoteFiles.getFileFromPeers(fileId, fileProgress);
       console.log({ file })
       transferredFile(file);
@@ -172,8 +172,6 @@
     ko.applyBindings(vm);
     window.vm = vm;
   </script>
-
-
 
 </body>
 
