@@ -106,7 +106,7 @@
     async function connectToNetwork() {
       connectionStatus('initializing...');
       const me = peerstack.user.hydrateMe(userId(), secretKey());
-      const db = await peerstack.db.getIndexedDB()
+      const db = await peerstack.db.getIndexedDB(); // ensures db is setup
       peerstack.connections.eventHandlers.onDeviceDiscovered = deviceId => remoteDeviceIds.push(deviceId);
       peerstack.connections.eventHandlers.onDeviceConnected = connection => {
         peerstack.remoteCalls.syncDBs(connection);
