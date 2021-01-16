@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Peerstack Example</title>
+
+</head>
+
+<body>
+
+  <h1>Peerstack Example</h1>
+  <i>open dev tools and observe console output</i>
+
+  <!-- lodash (required by peerstack) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.20/lodash.min.js"
+    integrity="sha512-90vH1Z83AJY9DmlWa8WkjkV79yfS2n2Oxhsi2dZbIv0nC4E6m5AbH8Nh156kkM7JePmqD6tcZsfad1ueoaovww=="
+    crossorigin="anonymous"></script>
+
+  <!-- peerstack (latest)-->
+  <script src="https://unpkg.com/peerstack/dist/index.bundle.js" crossorigin="anonymous"></script>
+
+  <!-- knockout (not necessary but used in this example to bind data and functions to html elements)-->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.5.1/knockout-latest.min.js"
+    integrity="sha512-vs7+jbztHoMto5Yd/yinM4/y2DOkPLt0fATcN+j+G4ANY2z4faIzZIOMkpBmWdcxt+596FemCh9M18NUJTZwvw=="
+    crossorigin="anonymous"></script>
+
+  <p>
+    Device Id: <span data-bind="text: deviceId"></span>
+  </p>
+  <p>
+    User Id: <input data-bind="value: userId" />
+  </p>
+  <p>
+    Secret Key: <input data-bind="value: secretKey" />
+  </p>
+  <p>
+    <button data-bind="click: connectToNetwork, visible: !connectionStatus()">Connect to Network</button>
+    <span data-bind="text: connectionStatus"></span>
+  </p>
+  <p data-bind="visible: remoteDeviceIds().length">
+    Available Devices
+  </p>
+  <div data-bind="foreach: remoteDeviceIds" style="margin-left: 20px;">
+    <p>
+      <button data-bind="click: () => peerstack.connections.connectToDevice($data);">connect</button>
+      <span data-bind="text: $data"></span>
+    </p>
+  </div>
+  <p data-bind="visible: connectionStatus">
+    Connect to known device: <input placeholder="device id" data-bind="value: knownRemoteDeviceId" />
+    <button data-bind="click: connectToKnownDevice">connect</button>
+  </p>
+  <p data-bind="visible: remoteDevices().length">
+    Connected Devices
+  </p>
+  <div data-bind="foreach: remoteDevices" style="margin-left: 20px;">
+    <p>
+      <button data-bind="click: () => $parent.pingDevice($data)">ping</button> <span
+        data-bind="text: remoteDeviceId"></span>
+    </p>
+  </div>
+
+  <br /><br /><br /><br />
+  <div>
+    Add File: <input type="file" data-bind="event: { input: () => addFiles($element) }" />
+    <div data-bind="foreach: filesAdded" style="margin-left: 20px;">
+      <p>
+        File Id: <span data-bind="text: id"></span>
+      </p>
+    </div>
+  </div>
+  <div data-bind="visible: connectionStatus">
+    <p>
+      Request file from connected peers: <input data-bind="textInput: requestFileId" placeholder="file id" /> <button
+        data-bind="click: () => requestFile(requestFileId())">request</button>
+    </p>
+    <p data-bind="with: transferredFile">
+      <a data-bind="attr: { href: URL.createObjectURL(blob), download: name }">Save File</a>
+    </p>
+  </div>
+
+  <script>
+    ko.options.deferUpdates = true;
+    console.log({ peerstack })
+    const deviceId = peerstack.newid();
+    const userId = ko.observable();
+    const secretKey = ko.observable();
+    const connectionStatus = ko.observable();
+    const remoteDeviceIds = ko.observableArray();
+    const remoteDevices = ko.observableArray();
+    const knownRemoteDeviceId = ko.observableArray();
+    const filesAdded = ko.observableArray();
+    const requestFileId = ko.observable();
+    const transferredFile = ko.observable();
+
+    {
+      const newUser = peerstack.user.newMe();
+      userId(newUser.id);
+      secretKey(newUser.secretKey);
+    }
+
+    async function connectToNetwork() {
+      connectionStatus('initializing...');
+      const me = peerstack.user.hydrateMe(userId(), secretKey());
+      const db = await peerstack.db.getIndexedDB()
+      let user = await db.get(me.id);
+      peerstack.connections.eventHandlers.onDeviceDiscovered = deviceId => remoteDeviceIds.push(deviceId);
+      peerstack.connections.eventHandlers.onDeviceConnected = connection => {
+        peerstack.remoteCalls.syncDBs(connection);
+        remoteDevices(peerstack.connections.connections.map(d => Object.assign({}, d)));
+        connectionStatus(`Connected!`)
+        remoteDeviceIds(remoteDeviceIds().filter(id => id !== connection.remoteDeviceId))
+      }
+      peerstack.connections.eventHandlers.onDeviceDisconnected = connection => {
+        console.log('device disconnected!', connection)
+        remoteDevices(remoteDevices().filter(d => d.id != connection.id));
+      }
+      peerstack.connections.init(deviceId, me, 'https://theque.app');
+      connectionStatus('Ready to connect')
+    }
+
+    async function connectToKnownDevice() {
+      await peerstack.connections.connectToDevice(knownRemoteDeviceId());
+      knownRemoteDeviceId('');
+    }
+
+    async function pingDevice(connection) {
+      // low level call
+      connection.send('ping');
+      // high level, managed call
+      const pingResponse = await peerstack.remoteCalls.RPC(connection, peerstack.remoteCalls.ping)()
+      console.log({ pingResponse })
+    }
+
+    async function addFiles(fileInput) {
+      const db = await peerstack.db.getIndexedDB()
+      for (let i = 0; i < fileInput.files.length; i++) {
+        const file = fileInput.files.item(i);
+        const _file = {
+          type: 'File',
+          id: await peerstack.hashBlob(file),
+          blob: file,
+          fileType: file.type,
+          name: file.name,
+          size: file.size,
+        }
+        await db.files.save(_file);
+        filesAdded.push(_file);
+      }
+      fileInput.value = "";
+    }
+
+    const fileProgress = ko.observable(0);
+    fileProgress.subscribe(() => console.log(`file transfer: ${Math.round(fileProgress() * 100)}%`))
+    async function requestFile(fileId) {
+      const file = await peerstack.remoteFiles.getFileFromPeers(fileId, fileProgress);
+      console.log({ file })
+      transferredFile(file);
+    }
+
+    const vm = {
+      userId,
+      secretKey,
+      connectionStatus,
+      connectToNetwork,
+      pingDevice,
+      filesAdded
+    }
+    ko.applyBindings(vm);
+  </script>
+
+
+
+</body>
+
+</html>
