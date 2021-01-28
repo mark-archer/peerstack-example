@@ -5,8 +5,7 @@ This will work without running a server.  Just load [index.html](index.html) dir
 ## A few of things to try out
 
 Connect two devices
-- Load the page in two separate browsers or two separate devices 
-  - Two tabs in the same browser won't work, that's considered the same device
+- Load the page in two separate browsers tabs (or completely different devices if you'd like)
 - Click `connect to network` on both
 - Copy the device id of one to the `connect to known device` field on the other
 - Click `connect`
@@ -15,7 +14,7 @@ Connect two devices
 - Observe the other device receives the ping and sends back `pong`
 
 Automatic device discovery
-- Reload the page on both devices to disconnect from the network and clear state
+- Reload both pages to disconnect from the network and clear state
 - Click `connect to network` on the first device
 - Copy the `User Id` and `Secret Key` from the first device to the second device
 - Click `connect to network` on the second device
