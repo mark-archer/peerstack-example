@@ -98,14 +98,15 @@
     const transferredFile = ko.observable();
 
     {
-      const newUser = peerstack.user.newMe();
+      const newUser = peerstack.user.newUser();
       userId(newUser.id);
       secretKey(newUser.secretKey);
     }
 
     async function connectToNetwork() {
       connectionStatus('initializing...');
-      const me = peerstack.user.hydrateMe(userId(), secretKey());
+      await peerstack.user.init({ id: userId(), secretKey: secretKey(), dontStore: true })
+      const me = peerstack.user.hydrateUser(userId(), secretKey());
       peerstack.connections.eventHandlers.onDeviceDiscovered = deviceId => remoteDeviceIds.push(deviceId);
       peerstack.connections.eventHandlers.onDeviceConnected = connection => {
         peerstack.remoteCalls.syncDBs(connection);
