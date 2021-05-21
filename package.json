@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "lodash": "^4.17.21",
+    "socket.io": "2.3.0"
+  }
+}

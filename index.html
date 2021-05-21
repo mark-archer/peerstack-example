@@ -113,8 +113,14 @@
         console.log('device disconnected!', connection)
         remoteDevices(remoteDevices().filter(d => d.id != connection.id));
       }
+      
+      // CONFIG - use this if you're not setting up your own server
       peerstack.connections.init(deviceId, me, 'https://theque.app');
-      connectionStatus('Ready to connect')
+      
+      // CONFIG - use this if you're running the server in this example
+      // peerstack.connections.init(deviceId, me, 'http://localhost:7777/');
+      
+      connectionStatus('Ready to connect to another device')
     }
 
     async function connectToKnownDevice() {
